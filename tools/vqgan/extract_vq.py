@@ -18,6 +18,7 @@ from loguru import logger
 from omegaconf import OmegaConf
 
 from fish_speech.utils.file import AUDIO_EXTENSIONS, list_files, load_filelist
+from security import safe_command
 
 # register eval resolver
 OmegaConf.register_new_resolver("eval", eval)
@@ -158,8 +159,7 @@ def main(
             env["SLURM_NTASKS"] = str(num_workers)
 
             processes.append(
-                sp.Popen(
-                    [sys.executable] + sys.argv.copy(),
+                safe_command.run(sp.Popen, [sys.executable] + sys.argv.copy(),
                     env=env,
                 )
             )
