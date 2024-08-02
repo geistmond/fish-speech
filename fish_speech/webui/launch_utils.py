@@ -52,8 +52,8 @@ def version_check(commit):
         import requests
 
         commits = requests.get(
-            "https://api.github.com/repos/fishaudio/fish-speech/branches/main"
-        ).json()
+            "https://api.github.com/repos/fishaudio/fish-speech/branches/main", 
+        timeout=60).json()
         if commit != "<none>" and commits["commit"]["sha"] != commit:
             print("--------------------------------------------------------")
             print("| You are not up to date with the most recent release. |")
