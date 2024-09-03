@@ -1,12 +1,12 @@
 import math
 from pathlib import Path
-from random import Random
 
 import click
 from loguru import logger
 from tqdm import tqdm
 
 from fish_speech.utils.file import AUDIO_EXTENSIONS, list_files, load_filelist
+import secrets
 
 
 @click.command()
@@ -23,7 +23,7 @@ def main(root, val_ratio, val_count, filelist):
     logger.info(f"Found {len(files)} files")
     files = [str(file.relative_to(root)) for file in tqdm(files)]
 
-    Random(42).shuffle(files)
+    secrets.SystemRandom().Random(42).shuffle(files)
 
     if val_count is None and val_ratio is None:
         logger.info("Validation ratio and count not specified, using min(20%, 100)")
