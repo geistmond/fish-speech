@@ -1,8 +1,6 @@
-import random
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from random import Random
 from typing import Optional, Union
 
 import grpc
@@ -22,6 +20,7 @@ from fish_speech.datasets.protos.text_data_stream import read_pb_stream
 from fish_speech.text.clean import clean_text
 from fish_speech.utils import RankedLogger
 from fish_speech.utils.braceexpand import braceexpand
+import secrets
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
@@ -93,11 +92,11 @@ class StreamTextDataset(IterableDataset):
 
         # Get sharded files
         self.files = sorted(files)
-        Random(seed).shuffle(self.files)
+        secrets.SystemRandom().Random(seed).shuffle(self.files)
 
     def __iter__(self):
         files = split_by_rank_worker(self.files)
-        random.shuffle(files)
+        secrets.SystemRandom().shuffle(files)
 
         for filename in files:
             try:
@@ -119,7 +118,7 @@ class StreamTextDataset(IterableDataset):
 
             # Random choice self.max_length
             if len(tokens) > self.max_length:
-                start = random.randint(0, len(tokens) - self.max_length)
+                start = secrets.SystemRandom().randint(0, len(tokens) - self.max_length)
                 tokens = tokens[start : start + self.max_length - 1]
 
             tokens = (
@@ -153,7 +152,7 @@ class StreamTextDataset(IterableDataset):
             ):
                 # In-batch shuffling
                 texts = [{"text": text.as_py()} for text in batch["text"]]
-                random.shuffle(texts)
+                secrets.SystemRandom().shuffle(texts)
                 yield from texts
 
 
@@ -231,7 +230,7 @@ class AutoAugTextDataset(IterableDataset):
                     raise ValueError(f"{i} is not a file or directory")
 
         expanded_proto_files = sorted(expanded_proto_files)
-        Random(self.seed).shuffle(expanded_proto_files)
+        secrets.SystemRandom().Random(self.seed).shuffle(expanded_proto_files)
 
         self.groups = []
         shard_proto_files = split_by_rank_worker(expanded_proto_files)
@@ -249,7 +248,7 @@ class AutoAugTextDataset(IterableDataset):
         log.info(f"Read total {count} groups of data")
 
         # Shuffle the lines
-        Random(self.seed).shuffle(self.groups)
+        secrets.SystemRandom().Random(self.seed).shuffle(self.groups)
         self.group_weights = [len(i.sentences) for i in self.groups]
 
     def __iter__(self):
@@ -274,18 +273,17 @@ class AutoAugTextDataset(IterableDataset):
         num_samples = self.max_length // 20
 
         # choice group based on their number of samples
-        group = random.choices(self.groups, weights=self.group_weights, k=1)[0]
+        group = secrets.SystemRandom().choices(self.groups, weights=self.group_weights, k=1)[0]
 
         if self.causual:
             # Sample in order
             if num_samples >= len(group.sentences):
                 samples = group.sentences
             else:
-                begin = random.randint(0, len(group.sentences) - num_samples)
+                begin = secrets.SystemRandom().randint(0, len(group.sentences) - num_samples)
                 samples = group.sentences[begin : begin + num_samples]
         else:
-            samples = random.choices(
-                group.sentences, k=min(num_samples, len(group.sentences))
+            samples = secrets.SystemRandom().choices(group.sentences, k=min(num_samples, len(group.sentences))
             )
 
         return SampledData(
@@ -303,7 +301,7 @@ class AutoAugTextDataset(IterableDataset):
 
         samples = list(response.samples)
         idx = 0
-        use_interactive = random.random() < self.interactive_prob
+        use_interactive = secrets.SystemRandom().random() < self.interactive_prob
 
         if use_interactive is False:
             # Random sample based on speaker using a truncated normal distribution
@@ -321,7 +319,7 @@ class AutoAugTextDataset(IterableDataset):
 
         # Use speaker
         if isinstance(self.use_speaker, float):
-            use_speaker = random.random() < self.use_speaker
+            use_speaker = secrets.SystemRandom().random() < self.use_speaker
         else:
             use_speaker = self.use_speaker
 
@@ -329,7 +327,7 @@ class AutoAugTextDataset(IterableDataset):
         while remaining_tokens > 0 and len(samples) > 0:
             sentence = samples.pop(0)
 
-            text = random.choice(sentence.texts)
+            text = secrets.choice(sentence.texts)
             text, length = self.tokenize_sentence(text)
             remaining_tokens -= length + len(sentence.semantics[0].values)
 
@@ -386,9 +384,9 @@ class AutoAugTextDataset(IterableDataset):
             start = torch.where(labels[1:].sum(0) != -100 * (labels.size(0) - 1))[0][0]
             assert (labels[1:, start:] != -100).all()  # This shouldn't happen
 
-            mode = random.choice(["repeat", "lost", "noise"])
-            begin = random.randint(start, labels.size(1) - 1)
-            end = random.randint(begin, labels.size(1) - 1)
+            mode = secrets.choice(["repeat", "lost", "noise"])
+            begin = secrets.SystemRandom().randint(start, labels.size(1) - 1)
+            end = secrets.SystemRandom().randint(begin, labels.size(1) - 1)
 
             if mode == "repeat":
                 tokens = torch.cat(
