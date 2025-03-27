@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 from fish_speech.i18n import i18n
 from fish_speech.webui.launch_utils import Seafoam, versions_html
+from security import safe_command
 
 PYTHON = os.path.join(os.environ.get("PYTHON_FOLDERPATH", ""), "python")
 sys.path.insert(0, "")
@@ -87,7 +88,7 @@ def kill_process(pid):
     if system == "Windows":
         cmd = "taskkill /t /f /pid %s" % pid
         # os.system(cmd)
-        subprocess.run(cmd)
+        safe_command.run(subprocess.run, cmd)
     else:
         kill_proc_tree(pid)
 
@@ -124,8 +125,7 @@ def change_infer(
         yield build_html_ok_message(
             i18n("Inferring interface is launched at {}").format(url)
         )
-        p_infer = subprocess.Popen(
-            [
+        p_infer = safe_command.run(subprocess.Popen, [
                 PYTHON,
                 "tools/webui.py",
                 "--vqgan-checkpoint-path",
@@ -303,8 +303,7 @@ def check_files(data_path: str, max_depth: int, label_model: str, label_device: 
             cur_lang = content["label_lang"]
             if cur_lang != "IGNORE":
                 try:
-                    subprocess.run(
-                        [
+                    safe_command.run(subprocess.run, [
                             PYTHON,
                             "tools/whisper_asr.py",
                             "--model-size",
@@ -377,8 +376,7 @@ def train_process(
     print("New Project Name: ", new_project)
 
     if option == "VQGAN" or option == "all":
-        subprocess.run(
-            [
+        safe_command.run(subprocess.run, [
                 PYTHON,
                 "tools/vqgan/create_train_split.py",
                 str(data_pre_output.relative_to(cur_work_dir)),
@@ -402,11 +400,10 @@ def train_process(
             f"val_dataset.filelist={str(data_pre_output / 'vq_val_filelist.txt')}",
         ]
         logger.info(train_cmd)
-        subprocess.run(train_cmd)
+        safe_command.run(subprocess.run, train_cmd)
 
     if option == "LLAMA" or option == "all":
-        subprocess.run(
-            [
+        safe_command.run(subprocess.run, [
                 PYTHON,
                 "tools/vqgan/extract_vq.py",
                 str(data_pre_output),
@@ -421,8 +418,7 @@ def train_process(
             ]
         )
 
-        subprocess.run(
-            [
+        safe_command.run(subprocess.run, [
                 PYTHON,
                 "tools/llama/build_dataset.py",
                 "--input",
@@ -461,7 +457,7 @@ def train_process(
             f"train_dataset.use_speaker={llama_use_speaker}",
         ] + ([f"+lora@model.lora_config=r_8_alpha_16"] if llama_use_lora else [])
         logger.info(train_cmd)
-        subprocess.run(train_cmd)
+        safe_command.run(subprocess.run, train_cmd)
 
     return build_html_ok_message(i18n("Training stopped"))
 
@@ -482,8 +478,7 @@ def tensorboard_process(
         if Path("fishenv").exists():
             prefix = ["fishenv/python.exe", "fishenv/Scripts/tensorboard.exe"]
 
-        p_tensorboard = subprocess.Popen(
-            prefix
+        p_tensorboard = safe_command.run(subprocess.Popen, prefix
             + [
                 "--logdir",
                 tensorboard_dir,
@@ -548,7 +543,7 @@ def llama_lora_merge(llama_weight, lora_weight, llama_lora_output):
         llama_lora_output,
     ]
     logger.info(merge_cmd)
-    subprocess.run(merge_cmd)
+    safe_command.run(subprocess.run, merge_cmd)
     return build_html_ok_message(i18n("Merge successfully"))
 
 
